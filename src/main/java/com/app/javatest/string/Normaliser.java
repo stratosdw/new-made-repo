@@ -18,9 +18,6 @@ public class Normaliser {
 	 * <br/>
 	 * Finds the Levenshtein distance between two strings, the higher the score the
 	 * greater the distance. <br/>
-	 * <br/>
-	 * Levenshtein distance algorithm from
-	 * org.apache.commons.text.similarity.LevenshteinDistance
 	 * 
 	 * @param string1
 	 * @return Returns the string with the highest distance value
@@ -39,7 +36,7 @@ public class Normaliser {
 			if (!this.empty(string2)) {
 				int longestString = (string1.length() > string2.length()) ? string1.length() : string2.length();
 
-				double result = (longestString - this.apply(string1, string2)) / (double) longestString;
+				double result = (longestString - this.calculatesDistance(string1, string2)) / (double) longestString;
 				StringMatch n = new StringMatch(string2, result);
 				qualityScores.add(n);
 			}
@@ -55,73 +52,37 @@ public class Normaliser {
 		return rtrn.getTitle();
 	}
 
-	/***
-	 * Levenshtein distance algorithm implementation taken from
-	 * org.apache.commons.text.similarity.LevenshteinDistance.
-	 * 
-	 * @param left
-	 * @param right
-	 * @return
-	 */
-	private int apply(CharSequence left, CharSequence right) {
-		if (left == null || right == null) {
-			throw new IllegalArgumentException("CharSequences must not be null");
-		}
+	private int calculatesDistance(String left, String right) {
+		int leftLength = left.length() + 1;
+		int rightLength = right.length() + 1;
+		
+		int[][] matrix = new int[leftLength][rightLength];
 
-		/*
-		 * This implementation use two variable to record the previous cost counts, So
-		 * this implementation use less memory than previous impl.
-		 */
-
-		int n = left.length(); // length of left
-		int m = right.length(); // length of right
-
-		if (n == 0) {
-			return m;
-		} else if (m == 0) {
-			return n;
-		}
-
-		if (n > m) {
-			// swap the input strings to consume less memory
-			final CharSequence tmp = left;
-			left = right;
-			right = tmp;
-			n = m;
-			m = right.length();
-		}
-
-		final int[] p = new int[n + 1];
-
-		// indexes into strings left and right
-		int i; // iterates through left
-		int j; // iterates through right
-		int upperLeft;
-		int upper;
-
-		char rightJ; // jth character of right
-		int cost; // cost
-
-		for (i = 0; i <= n; i++) {
-			p[i] = i;
-		}
-
-		for (j = 1; j <= m; j++) {
-			upperLeft = p[0];
-			rightJ = right.charAt(j - 1);
-			p[0] = j;
-
-			for (i = 1; i <= n; i++) {
-				upper = p[i];
-				cost = left.charAt(i - 1) == rightJ ? 0 : 1;
-				// minimum of cell to the left+1, to the top+1, diagonally left and up +cost
-				p[i] = Math.min(Math.min(p[i - 1] + 1, p[i] + 1), upperLeft + cost);
-				upperLeft = upper;
+		for (int i = 1; i < leftLength; i++) {
+			// fills x-axis
+			matrix[i][0] = i;
+			int indexIMinus = i - 1;
+			for (int j = 1; j < rightLength; j++) {
+				// fills y-axis
+				matrix[0][j] = j;
+				int operationCost = 0;
+				int indexJMinus = j - 1;
+				
+				// if an operation is done (insert, replace, delete), costs 1
+				if (left.charAt(indexIMinus) != right.charAt(indexJMinus)) {
+					operationCost = 1;
+				}
+				
+				// gets the minimum value of the three operations
+				matrix[i][j] = Math.min(
+						Math.min(matrix[indexIMinus][j] + 1, matrix[i][indexJMinus] + 1),
+						matrix[indexIMinus][indexJMinus] + operationCost);
 			}
 		}
-		return p[n];
-	}
 
+		return matrix[left.length()][right.length()];
+	}
+		
 	/***
 	 * Checks if string is empty ("") or null.
 	 * 
